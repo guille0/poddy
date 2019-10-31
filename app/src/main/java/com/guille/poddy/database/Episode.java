@@ -1,0 +1,89 @@
+package com.guille.poddy.database;
+
+import android.os.Parcelable;
+import android.os.Parcel;
+
+public class Episode implements Parcelable {
+    // Non-null
+    public long id;
+    public String title;
+    public long podcastId;
+    public Boolean downloaded;
+
+    public String file = "";        // Only if downloaded is true
+    public String description = "";
+    public String date = "";
+
+    public String enclosureUrl = "";        // UNIQUE
+    public String enclosureType = "";
+    public Integer enclosureLength = 0;
+
+    public String duration = "";
+    public Integer position = 0;
+
+    public Episode(){}
+
+    protected Episode(Parcel in) {
+        id = in.readLong();
+        title = in.readString();
+        podcastId = in.readLong();
+        byte downloadedVal = in.readByte();
+        downloaded = downloadedVal == 0x02 ? null : downloadedVal != 0x00;
+        file = in.readString();
+        description = in.readString();
+        date = in.readString();
+        enclosureUrl = in.readString();
+        enclosureType = in.readString();
+        enclosureLength = in.readByte() == 0x00 ? null : in.readInt();
+        duration = in.readString();
+        position = in.readByte() == 0x00 ? null : in.readInt();
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeLong(id);
+        dest.writeString(title);
+        dest.writeLong(podcastId);
+        if (downloaded == null) {
+            dest.writeByte((byte) (0x02));
+        } else {
+            dest.writeByte((byte) (downloaded ? 0x01 : 0x00));
+        }
+        dest.writeString(file);
+        dest.writeString(description);
+        dest.writeString(date);
+        dest.writeString(enclosureUrl);
+        dest.writeString(enclosureType);
+        if (enclosureLength == null) {
+            dest.writeByte((byte) (0x00));
+        } else {
+            dest.writeByte((byte) (0x01));
+            dest.writeInt(enclosureLength);
+        }
+        dest.writeString(duration);
+        if (position == null) {
+            dest.writeByte((byte) (0x00));
+        } else {
+            dest.writeByte((byte) (0x01));
+            dest.writeInt(position);
+        }
+    }
+
+    @SuppressWarnings("unused")
+    public static final Parcelable.Creator<Episode> CREATOR = new Parcelable.Creator<Episode>() {
+        @Override
+        public Episode createFromParcel(Parcel in) {
+            return new Episode(in);
+        }
+
+        @Override
+        public Episode[] newArray(int size) {
+            return new Episode[size];
+        }
+    };
+}

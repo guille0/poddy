@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">poddy</string>
+
+    <string name="tab_this_week">This week</string>
+    <string name="tab_all_podcasts">Podcasts</string>
+    <string name="tab_downloaded">Downloaded</string>
+
+    <string name="title_activity_podcast_episodes">Podcast episodes</string>
+    <string name="title_activity_new_podcast">New podcast</string>
+    <string name="title_activity_media_player">Audio player</string>
+    <string name="title_activity_itunes_search">Itunes search</string>
+
+    <string name="delete_podcast">Delete podcast</string>
+    <string name="refresh_podcast">Refresh podcast</string>
+
+    <string name="button_search_itunes">Search iTunes</string>
+    <string name="button_add_podcast">Add podcast</string>
+    <string name="example_feed">www.website.com/feed</string>
+
+    <string name="menu_update">Update</string>
+    <string name="menu_new_podcast">New podcast</string>
+
+
+    <string name="control_play">Play</string>
+    <string name="control_stop">Stop</string>
+    <string name="control_pause">Pause</string>
+    <string name="control_resume">Resume</string>
+    <string name="control_download">Download</string>
+    <string name="control_cancel">Cancel</string>
+    <string name="control_delete">Delete</string>
+</resources>
