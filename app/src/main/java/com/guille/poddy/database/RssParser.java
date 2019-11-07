@@ -184,8 +184,8 @@ public class RssParser {
                                 break;
                             case "enclosure":
                                 currentEp.enclosureUrl = parser.getAttributeValue(null, "url");
-                                currentEp.enclosureType = parser.getAttributeValue(null, "type");
-                                currentEp.enclosureLength = Integer.parseInt(parser.getAttributeValue(null, "length"));
+//                                currentEp.enclosureType = parser.getAttributeValue(null, "type");
+//                                currentEp.enclosureLength = Integer.parseInt(parser.getAttributeValue(null, "length"));
                                 break;
                         }
                     }

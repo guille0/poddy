@@ -73,7 +73,6 @@ public class ActivityItunesSearch extends ActivityAbstract implements RecyclerVi
         // Set up the recycler view
         recyclerView = findViewById(R.id.podcastList);
         recyclerView.setHasFixedSize(true);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
     }
 
     private void search(String url) {
@@ -110,6 +109,7 @@ public class ActivityItunesSearch extends ActivityAbstract implements RecyclerVi
         RecyclerViewItunesSearch adapter = new RecyclerViewItunesSearch(this, podcasts);
         adapter.setClickListener(this);
         recyclerView.setAdapter(adapter);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
     }
 
     private List<Podcast> parseJson(String jsonString) {
