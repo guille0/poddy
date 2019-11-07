@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
+    <!--  Can't backup the podcast database since the eps won't be downloaded on other devices  -->
     <exclude
         domain="database"
         path="podcastDatabase" />
-    <exclude
-        domain="sharedpref"
-        path="poddy.preferences.xml" />
 </full-backup-content>
