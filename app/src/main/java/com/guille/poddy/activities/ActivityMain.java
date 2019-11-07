@@ -1,6 +1,7 @@
 package com.guille.poddy.activities;
 
 import android.os.Bundle;
+import android.content.*;
 
 import com.google.android.material.tabs.TabLayout;
 
@@ -14,29 +15,27 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.content.pm.PackageManager;
 
+import androidx.preference.*;
 import com.guille.poddy.R;
 
 import androidx.appcompat.widget.Toolbar;
+import com.guille.poddy.eventbus.*;
+import org.greenrobot.eventbus.*;
 
 
-public class ActivityMain extends ActivityAbstractShowPodcasts {
+public class ActivityMain extends ActivityAbstract {
     private ViewPager viewPager;
-
-    @Override
-    public String getPodcastShown() {
-        return "all";
-    }
 
     // Permissions stuff
     private final int REQUEST_CODE_PERMISSIONS = 101;
     private final String[] REQUIRED_PERMISSIONS = new String[]{
             "android.permission.WRITE_EXTERNAL_STORAGE",
-            "android.permission.READ_EXTERNAL_STORAGE"
+            "android.permission.READ_EXTERNAL_STORAGE",
+//            "android.permission.MEDIA_CONTENT_CONTROL"
     };
 
-
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -47,7 +46,6 @@ public class ActivityMain extends ActivityAbstractShowPodcasts {
 
         // database test stuff
 //        deleteDatabase("podcastDatabase");
-//        DatabaseHelper dbh = DatabaseHelper.getInstance(getApplicationContext());
 
         // Set up toolbar
         Toolbar toolbar = findViewById(R.id.toolbar);
@@ -60,20 +58,8 @@ public class ActivityMain extends ActivityAbstractShowPodcasts {
         // set up viewpager
         viewPager = findViewById(R.id.viewPager);
         viewPager.setAdapter(sectionsPagerAdapter);
+        viewPager.setOffscreenPageLimit(3);
         tabs.setupWithViewPager(viewPager);
-    }
-
-    // REFRESH
-
-    @Override
-    public void onStart() {
-        super.onStart();
-        refresh();
-    }
-
-    @Override
-    protected void refresh() {
-        viewPager.getAdapter().notifyDataSetChanged();
     }
 
     // PERMISSIONS
@@ -89,7 +75,6 @@ public class ActivityMain extends ActivityAbstractShowPodcasts {
     }
 
     private boolean allPermissionsGranted() {
-
         for (String permission : REQUIRED_PERMISSIONS) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
                 return true;

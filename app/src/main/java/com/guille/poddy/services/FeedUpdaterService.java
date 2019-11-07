@@ -1,16 +1,26 @@
 package com.guille.poddy.services;
 
-import android.util.Log;
+import android.util.*;
 
 import com.guille.poddy.*;
 import com.guille.poddy.database.*;
 import com.guille.poddy.Helpers.ResponseToStringTask;
 
 import java.nio.charset.StandardCharsets;
+import android.os.AsyncTask;
 
+import java.io.*;
+import java.net.*;
+import java.util.*;
+import java.text.*;
+import android.net.*;
+import android.graphics.*;
+import android.media.*;
 import android.app.*;
 import android.os.*;
 import android.content.*;
+import com.guille.poddy.eventbus.*;
+import org.greenrobot.eventbus.*;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
@@ -24,136 +34,143 @@ public class FeedUpdaterService extends Service {
 
     private Queue<String> queue = new ArrayDeque<>();
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-
-        String[] feedUrls = intent.getExtras().getStringArray("feedUrls");
-        enqueueFeeds(feedUrls);
-
-        return super.onStartCommand(intent, flags, startId);
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onReceiveUpdateFeeds(MessageEvent.UpdateFeeds event) {
+        enqueueFeeds(event.urls);
     }
-
-    private final BroadcastReceiver feedReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String[] feedUrls = intent.getExtras().getStringArray("feedUrls");
-            enqueueFeeds(feedUrls);
-        }
-    };
-
 
     @Override
     public void onCreate() {
         super.onCreate();
-        final LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getApplicationContext());
-        bm.registerReceiver(feedReceiver, new IntentFilter(Broadcast.UPDATE_FEEDS));
+        EventBus.getDefault().register(this);
     }
 
     @Override
     public void onDestroy() {
+        EventBus.getDefault().unregister(this);
         super.onDestroy();
-        final LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getApplicationContext());
-        bm.unregisterReceiver(feedReceiver);
     }
 
     private void enqueueFeeds(String[] feedUrls) {
         // Put urls in queue (if they aren't there already)
         for (String url : feedUrls)
             if (!queue.contains(url)) queue.add(url);
-        startUpdate();
     }
 
     private void startUpdate() {
         if (!queue.isEmpty()) {
-            // Pops feed url from queue and updates it
-            String feed = queue.remove();
+            // Gets feed url from queue and updates it (it gets removed when we finish updating)
+            String feed = queue.peek();
             updatePodcastFromUrl(feed);
-        } else stopSelf();
+            Log.d("FeedUpdaterService", "Downloading rss...");
+        } else {
+            Log.d("FeedUpdaterService", "Closing service");
+            stopSelf();
+        }
     }
 
-
-    private void updatePodcastFromUrl(String url) {
+    private void updatePodcastFromUrl(String feedUrl) {
         ResponseToStringTask request = new ResponseToStringTask() {
             @Override
             protected void onPostExecute(String result) {
-                super.onPostExecute(result);
-
                 InputStream is = new ByteArrayInputStream(result.getBytes(StandardCharsets.UTF_8));
-                updatePodcast(is, url);
+                Log.d("FeedUpdaterService", "Downloaded rss, parsing now...");
+                new ParseRss(is, feedUrl).execute();
             }
         };
-        request.execute(url);
+        request.execute(feedUrl);
     }
 
+    public class ParseRss extends AsyncTask<Void, ParsedRss, ParsedRss> {
+        private InputStream is;
+        private String url;
 
-    private void updatePodcast(InputStream is, String url) {
-        DatabaseHelper dbh = DatabaseHelper.getInstance(getApplicationContext());
-        // Parse the rss file and check if it's valid
-        ParsedRss parsed = RssParser.parseXMLFromStream(is, url);
-        if  (parsed == null || parsed.podcast.title == null) {
-            Log.e("PodcastUpdater", "Could not parse RSS feed");
-            return;
+        public ParseRss(InputStream inputStream, String stringUrl) {
+            is = inputStream;
+            url = stringUrl;
         }
-        // Set the feed's url and directory
-        // The directory is only set if it's a new podcast
-        parsed.podcast.url = url;
-        parsed.podcast.directory = Preferences.getDownloadDirectory(getApplicationContext()) + parsed.podcast.title + "/";
 
-        final String imageFile = parsed.podcast.directory + "podcastArt.png";
-        parsed.podcast.imageFile = imageFile;
+        @Override
+        protected ParsedRss doInBackground(Void... params) {
 
-        // Download the image
-        Helpers.ResponseToImageTask request = new Helpers.ResponseToImageTask() {
-            @Override
-            protected void onPostExecute(Bitmap result) {
-                super.onPostExecute(result);
-                // Save bitmap to file
-                File checkFile = new File(imageFile);
-                if(checkFile.exists()) {
-                    checkFile.delete();
-                }
-                try {
-                    new File (parsed.podcast.directory).mkdirs();
-                    result.compress(Bitmap.CompressFormat.PNG, 100, new FileOutputStream(imageFile));
-                } catch (Exception e) { e.printStackTrace(); }
+            ParsedRss parsed = RssParser.parseXMLFromStream(is, url);
+            if  (parsed == null || parsed.podcast.title == null) {
+                Log.e("PodcastUpdater", "Could not parse RSS feed");
+                return null;
             }
-        };
-        request.execute(parsed.podcast.imageUrl);
+            Log.d("FeedUpdaterService", "Done parsing...");
+            // Set the feed's url and directory
+            // The directory is only set if it's a new podcast
+            parsed.podcast.url = url;
+            final String podcastFolder = parsed.podcast.title.replaceAll("[\\\\/:*?\"<>+|]", "");
+            parsed.podcast.directory = Preferences.getDownloadDirectory(getApplicationContext()) + podcastFolder + "/";
 
+            // Add episodes to database in new thread
+            Log.d("FeedUpdaterService", "Updating db now...");
+            final DatabaseHelper dbh = DatabaseHelper.getInstance(getApplicationContext());
+            final long podcastId = dbh.getOrCreatePodcast(parsed.podcast).id;
+            // Main operation, add all the episodes to the database (or ignore if exists)
+            dbh.addEpisodes(parsed.episodes, podcastId);
+            Log.d("FeedUpdaterService", "DB updated");
 
-        // Check if that podcast already exists in database or create it
-        final long podcastId = dbh.getOrCreatePodcast(parsed.podcast).id;
+            return parsed;
+        }
 
-        // Now that we have the podcastId add episodes to database
-        dbh.addEpisodes(parsed.episodes, podcastId);
-
-        // Refresh activities that show podcasts after updating podcast
-        try {
-            Intent intent = new Intent(Broadcast.REFRESH_PODCASTS);
-            intent.putExtra("podcastUrl", url);
-
-            final LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getApplicationContext());
-            bm.sendBroadcast(intent);
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            // Get the next feed from the queue, if there is one
+        @Override
+        protected void onPostExecute(ParsedRss parsed) {
+            // Refresh activities that show podcasts after updating podcast
+            EventBus.getDefault().post(new MessageEvent.RefreshPodcast(parsed.podcast.url));
+            queue.remove();
             startUpdate();
+            super.onPostExecute(parsed);
         }
     }
 
 
     // Binder stuff
     private final IBinder iBinder = new FeedUpdaterService.LocalBinder();
-
     @Override
     public IBinder onBind(Intent intent) {
         return iBinder;
     }
-
     public class LocalBinder extends Binder {
         public FeedUpdaterService getService() {
             return FeedUpdaterService.this;
         }
     }
+
+    public static boolean isServiceRunning(Context context) {
+        ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (FeedUpdaterService.class.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static void updateFeeds(Context context, String[] feeds) {
+            if (!isServiceRunning(context)) {
+                // Start the service and play the audio
+                ServiceConnection serviceConnection = new ServiceConnection() {
+                    @Override
+                    public void onServiceDisconnected(ComponentName name) {}
+                    @Override
+                    public void onServiceConnected(ComponentName name, IBinder service) {
+                        FeedUpdaterService.LocalBinder binder = (FeedUpdaterService.LocalBinder) service;
+                        binder.getService().enqueueFeeds(feeds);
+                        binder.getService().startUpdate();
+                        context.unbindService(this);
+                    }
+                };
+
+                Intent intent = new Intent(context, FeedUpdaterService.class);
+                context.startService(intent);
+                context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+
+            } else {
+                // Send a Bus with the feeds
+                EventBus.getDefault().post(new MessageEvent.UpdateFeeds(feeds));
+            }
+        }
 }

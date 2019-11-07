@@ -7,25 +7,13 @@
     android:layout_height="match_parent"
     tools:context=".activities.ActivityPodcastEpisodes">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/layoutAppBar"
-        android:layout_width="0dp"
+    <include
+        layout="@layout/include_appbarlayout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:theme="@style/AppTheme.AppBarOverlay"
-        app:layout_constraintBottom_toTopOf="@+id/layoutContent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="?attr/colorPrimary"
-            android:minHeight="?attr/actionBarSize"
-            app:titleTextColor="@android:color/white"/>
-
-    </com.google.android.material.appbar.AppBarLayout>
+        app:layout_constraintTop_toTopOf="parent" />
 
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -46,36 +34,12 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <Button
-            android:id="@+id/buttonTest"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Add test feed (doughboys)"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/buttonItunes" />
-
-        <Button
-            android:id="@+id/buttonTest2"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Add test feed (played)"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/buttonTest" />
-
-        <Button
-            android:id="@+id/buttonTest3"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Add test feed (handbook)"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/buttonTest2" />
-
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/textRawUrl"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/buttonTest3">
+            app:layout_constraintTop_toBottomOf="@+id/buttonItunes">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/textRawUrlEdit"
@@ -100,7 +64,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        app:layout_constraintTop_toBottomOf="@id/layoutEpisodeInfo"
+        app:layout_constraintTop_toBottomOf="@id/layoutContent"
         app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

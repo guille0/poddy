@@ -11,7 +11,9 @@ import java.io.FileInputStream;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import android.util.*;
 import java.text.FieldPosition;
+import com.guille.poddy.*;
 
 public class RssParser {
 
@@ -45,6 +47,7 @@ public class RssParser {
             parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true);
             parser.setInput(is, null);
 
+
             return processParsing(parser, url);
 
         } catch (XmlPullParserException | IOException e) {
@@ -67,78 +70,127 @@ public class RssParser {
         boolean inChannel = false;
         boolean inImage = false;
 
-        SimpleDateFormat extractDate = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z");
+        SimpleDateFormat extractDate = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z", Locale.US);
 
-        SimpleDateFormat convertDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        SimpleDateFormat convertDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
         Date date = new Date();
 
 
         while (eventType != XmlPullParser.END_DOCUMENT) {
-            String eltName;
+            String tag;
 
             switch (eventType) {
                 case XmlPullParser.END_TAG:
-                    eltName = parser.getName();
-                    if ("item".equals(eltName)) {
-                        episodes.add(currentEp);
-                    } else if ("channel".equals(eltName)) {
-                        inChannel = false;
-                    } else if ("image".equals(eltName)) {
-                        inImage = false;
+                    tag = parser.getName();
+                    switch (tag) {
+                        case "item":
+                            if (currentEp.guid.equals("")) {
+                                currentEp.guid = currentEp.enclosureUrl;
+                            }
+                            episodes.add(currentEp);
+                            break;
+                        case "channel":
+                            inChannel = false;
+                            break;
+                        case "image":
+                            inImage = false;
                     }
 
 
                 case XmlPullParser.START_TAG:
-                    eltName = parser.getName();
+                    tag = parser.getName();
 
                     // Podcast
 
-                    if ("channel".equals(eltName)) {
-                        inChannel = true;
+                    switch (tag) {
+                        case "channel":
+                            inChannel = true;
+                            break;
+                        case "item":
+                            inChannel = false;
+                            inImage = false;
+                            currentEp = new Episode();
+                            break;
                     }
-                    if (inChannel){
-                        if ("title".equals(eltName)) {
-                            podcast.title = parser.nextText();
-                        } else if ("description".equals(eltName)) {
-                            podcast.description = parser.nextText();
-                        } else if ("image".equals(eltName)) {
-                            inImage = true;
-                        }
-                        if (inImage && "url".equals(eltName)) {
-                            podcast.imageUrl = parser.nextText();
+
+                    if (inChannel) {
+                        switch (tag) {
+                            case "title":
+                                podcast.title = parser.nextText();
+                                break;
+                            case "description":
+                                podcast.description = parser.nextText();
+                                break;
+                            case "language":
+                                podcast.language = parser.nextText();
+                                break;
+                            case "author":
+                                podcast.author= parser.nextText();
+                                break;
+                            case "link":
+                                podcast.link= parser.nextText();
+                                break;
+                            case "image":
+                                inImage = true;
+                                break;
+                            case "url":
+                                if (inImage) podcast.imageUrl = parser.nextText();
+                                break;
                         }
 
                     }
-                        // Episodes
+                    // Episodes
 
-                    if ("item".equals(eltName)) {
-                        inChannel = false;
-                        inImage = false;
-                        currentEp = new Episode();
-                    } else if (currentEp != null) {
-                        if ("title".equals(eltName)) {
-                            currentEp.title = parser.nextText();
-                        } else if ("description".equals(eltName)) {
-                            currentEp.description = parser.nextText();
-                        } else if ("pubDate".equals(eltName)) {
-                            // Convert date to ISO8601 for sqlite storage
-                            try {
-                                date = extractDate.parse(parser.nextText());
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            } finally {
-                                StringBuffer stringBuffer = new StringBuffer();
-                                convertDate.format(date, stringBuffer, new FieldPosition(0));
-                                currentEp.date = stringBuffer.toString();
-                            }
-
-                        } else if (eltName.equals("enclosure")) {
-                            currentEp.enclosureUrl = parser.getAttributeValue(null, "url");
-                            currentEp.enclosureType = parser.getAttributeValue(null, "type");
-                            currentEp.enclosureLength = Integer.parseInt(parser.getAttributeValue(null, "length"));
+                    if (currentEp != null) {
+                        switch (tag) {
+                            case "title":
+                                currentEp.title = parser.nextText();
+                                break;
+                            case "description":
+                                currentEp.description = parser.nextText();
+                                break;
+                            case "author":
+                                currentEp.author = parser.nextText();
+                                break;
+                            case "guid":
+                                currentEp.guid = parser.nextText();
+                                break;
+                            case "image":
+                                currentEp.imageUrl = parser.nextText();
+                                break;
+                            case "episode":
+                                final String episode = parser.nextText();
+                                if (episode.matches("^\\d+$"))
+                                    currentEp.episode = Integer.parseInt(episode);
+                                break;
+                            case "duration":
+                                final String duration = parser.nextText();
+                                if (duration.matches("^[0-9][0-9]:[0-9][0-9]:[0-9][0-9]$"))
+                                    currentEp.duration = Helpers.hhmmssToMs(duration);
+                                else if (duration.matches("^\\d+$"))
+                                    currentEp.duration = 1000*Long.parseLong(duration);
+                                break;
+                            case "pubDate":
+                                // Convert date to ISO8601 for sqlite storage
+                                try {
+                                    date = extractDate.parse(parser.nextText());
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                } finally {
+                                    StringBuffer stringBuffer = new StringBuffer();
+                                    convertDate.format(date, stringBuffer, new FieldPosition(0));
+                                    currentEp.date = stringBuffer.toString();
+                                }
+                                break;
+                            case "enclosure":
+                                currentEp.enclosureUrl = parser.getAttributeValue(null, "url");
+                                currentEp.enclosureType = parser.getAttributeValue(null, "type");
+                                currentEp.enclosureLength = Integer.parseInt(parser.getAttributeValue(null, "length"));
+                                break;
                         }
                     }
             }
+
             eventType = parser.next();
         }
 

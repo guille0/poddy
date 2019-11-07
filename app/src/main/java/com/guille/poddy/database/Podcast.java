@@ -6,12 +6,14 @@ import android.os.Parcel;
 public class Podcast implements Parcelable {
     public long id;
 
-    // Information gotten from the rss feed
     public String title;
     public String description;
-    public String imageFile;
     public String imageUrl;
     public String directory;
+
+    public String language;
+    public String author;
+    public String link;
 
     // Link to the rss feed (unique)
     public String url;
@@ -22,9 +24,11 @@ public class Podcast implements Parcelable {
         id = in.readLong();
         title = in.readString();
         description = in.readString();
-        imageFile = in.readString();
         imageUrl = in.readString();
         directory = in.readString();
+        language = in.readString();
+        author = in.readString();
+        link = in.readString();
         url = in.readString();
     }
 
@@ -38,9 +42,11 @@ public class Podcast implements Parcelable {
         dest.writeLong(id);
         dest.writeString(title);
         dest.writeString(description);
-        dest.writeString(imageFile);
         dest.writeString(imageUrl);
         dest.writeString(directory);
+        dest.writeString(language);
+        dest.writeString(author);
+        dest.writeString(link);
         dest.writeString(url);
     }
 

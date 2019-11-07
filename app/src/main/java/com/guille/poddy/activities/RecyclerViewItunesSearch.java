@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import android.widget.TextView;
+import android.widget.Button;
 
 import android.content.Context;
 
@@ -34,9 +35,7 @@ public class RecyclerViewItunesSearch extends RecyclerView.Adapter<com.guille.po
     @NotNull
     @Override
     public com.guille.poddy.activities.RecyclerViewItunesSearch.ViewHolder onCreateViewHolder(@NotNull ViewGroup parent, int viewType) {
-
-        // TODO change podcast_row if we want to show searches differently
-        View view = mInflater.inflate(R.layout.podcast_row, parent, false);
+        View view = mInflater.inflate(R.layout.feed_row, parent, false);
         return new com.guille.poddy.activities.RecyclerViewItunesSearch.ViewHolder(view);
     }
 
@@ -44,7 +43,7 @@ public class RecyclerViewItunesSearch extends RecyclerView.Adapter<com.guille.po
     @Override
     public void onBindViewHolder(com.guille.poddy.activities.RecyclerViewItunesSearch.ViewHolder holder, int position) {
         Podcast pcast = mData.get(position);
-        holder.myTextView.setText(pcast.title);
+        holder.button.setText(pcast.title);
     }
 
     // total number of rows
@@ -56,12 +55,12 @@ public class RecyclerViewItunesSearch extends RecyclerView.Adapter<com.guille.po
 
     // stores and recycles views as they are scrolled off screen
     public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
-        TextView myTextView;
+        Button button;
 
         ViewHolder(View itemView) {
             super(itemView);
-            myTextView = itemView.findViewById(R.id.textPodcastTitle);
-            itemView.setOnClickListener(this);
+            button = itemView.findViewById(R.id.button);
+            button.setOnClickListener(this);
         }
 
         @Override

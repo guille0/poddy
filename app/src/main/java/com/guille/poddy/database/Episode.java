@@ -6,20 +6,30 @@ import android.os.Parcel;
 public class Episode implements Parcelable {
     // Non-null
     public long id;
-    public String title;
+    public String title = "";
+    public String description = "";
     public long podcastId;
     public Boolean downloaded;
 
     public String file = "";        // Only if downloaded is true
-    public String description = "";
+    public String imageUrl = "";
+    public int episode = 0;
     public String date = "";
+
+    public String guid = "";
+    public String author = "";
 
     public String enclosureUrl = "";        // UNIQUE
     public String enclosureType = "";
     public Integer enclosureLength = 0;
 
-    public String duration = "";
-    public Integer position = 0;
+    public long duration = 0;
+    public long position = 0;
+
+    // Podcast info
+
+    public String podcastTitle;
+    public String podcastImageUrl;
 
     public Episode(){}
 
@@ -30,13 +40,19 @@ public class Episode implements Parcelable {
         byte downloadedVal = in.readByte();
         downloaded = downloadedVal == 0x02 ? null : downloadedVal != 0x00;
         file = in.readString();
+        imageUrl = in.readString();
         description = in.readString();
+        episode = in.readInt();
         date = in.readString();
+        guid = in.readString();
+        author = in.readString();
         enclosureUrl = in.readString();
         enclosureType = in.readString();
         enclosureLength = in.readByte() == 0x00 ? null : in.readInt();
-        duration = in.readString();
-        position = in.readByte() == 0x00 ? null : in.readInt();
+        duration = in.readLong();
+        position = in.readLong();
+        podcastTitle = in.readString();
+        podcastImageUrl = in.readString();
     }
 
     @Override
@@ -55,8 +71,12 @@ public class Episode implements Parcelable {
             dest.writeByte((byte) (downloaded ? 0x01 : 0x00));
         }
         dest.writeString(file);
+        dest.writeString(imageUrl);
         dest.writeString(description);
+        dest.writeInt(episode);
         dest.writeString(date);
+        dest.writeString(guid);
+        dest.writeString(author);
         dest.writeString(enclosureUrl);
         dest.writeString(enclosureType);
         if (enclosureLength == null) {
@@ -65,13 +85,10 @@ public class Episode implements Parcelable {
             dest.writeByte((byte) (0x01));
             dest.writeInt(enclosureLength);
         }
-        dest.writeString(duration);
-        if (position == null) {
-            dest.writeByte((byte) (0x00));
-        } else {
-            dest.writeByte((byte) (0x01));
-            dest.writeInt(position);
-        }
+        dest.writeLong(duration);
+        dest.writeLong(position);
+        dest.writeString(podcastTitle);
+        dest.writeString(podcastImageUrl);
     }
 
     @SuppressWarnings("unused")

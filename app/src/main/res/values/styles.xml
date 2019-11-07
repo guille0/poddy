@@ -1,20 +1,62 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <!-- Customize your theme here. -->
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
-    </style>
-
-    <style name="AppTheme.NoActionBar">
+    <style name="LightTheme" parent="Theme.AppCompat.Light.DarkActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
+        <!--    COLORS    -->
+        <item name="colorPrimary">@color/BurlyWood</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <!--   TEXT COLORS     -->
+        <item name="android:textColor">@color/Black</item>
+        <item name="android:titleTextColor">@color/White</item>
+        <!--    MENU ICONS    -->
+        <item type="attr" name="ic_add" tools:ignore="DuplicateDefinition,ReferenceType">@drawable/ic_add_black_24dp</item>
+        <item type="attr" name="ic_more_vert" tools:ignore="DuplicateDefinition">@drawable/ic_more_vert_black_24dp</item>
+        <item type="attr" name="ic_refresh" tools:ignore="DuplicateDefinition,ReferenceType">@drawable/ic_refresh_black_24dp</item>
+
+        <!--    ICONS    -->
+        <item type="attr" name="ic_cancel" tools:ignore="DuplicateDefinition">@drawable/ic_cancel_black_32dp</item>
+        <item type="attr" name="ic_delete" tools:ignore="DuplicateDefinition">@drawable/ic_delete_black_32dp</item>
+        <item type="attr" name="ic_fast_forward" tools:ignore="DuplicateDefinition">@drawable/ic_fast_forward_black_32dp</item>
+        <item type="attr" name="ic_fast_rewind" tools:ignore="DuplicateDefinition">@drawable/ic_fast_rewind_black_32dp</item>
+        <item type="attr" name="ic_file_download" tools:ignore="DuplicateDefinition">@drawable/ic_file_download_black_32dp</item>
+        <item type="attr" name="ic_pause" tools:ignore="DuplicateDefinition">@drawable/ic_pause_black_32dp</item>
+        <item type="attr" name="ic_play" tools:ignore="DuplicateDefinition">@drawable/ic_play_arrow_black_32dp</item>
+        <item type="attr" name="ic_stop" tools:ignore="DuplicateDefinition">@drawable/ic_stop_black_32dp</item>
+
+
+        <item type="attr" name="ic_poddy" tools:ignore="DuplicateDefinition">@drawable/ic_poddy</item>
     </style>
 
-    <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+    <style name="DarkTheme" parent="Theme.AppCompat.DayNight">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <!--    COLORS    -->
+        <item name="colorPrimary">@color/Sienna</item>
+        <item name="colorPrimaryDark">@color/SaddleBrown</item>
+        <item name="colorAccent">@color/IndianRed</item>
+        <!--   TEXT COLORS     -->
+        <item name="android:textColor">@color/Snow</item>
+        <item name="android:titleTextColor">@color/BlanchedAlmond</item>
+        <!--    MENU ICONS    -->
+        <item type="attr" name="ic_add" tools:ignore="DuplicateDefinition">@drawable/ic_add_white_24dp</item>
+        <item type="attr" name="ic_more_vert" tools:ignore="DuplicateDefinition">@drawable/ic_more_vert_white_24dp</item>
+        <item type="attr" name="ic_refresh" tools:ignore="DuplicateDefinition">@drawable/ic_refresh_white_24dp</item>
 
-    <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+        <!--    ICONS    -->
+        <item type="attr" name="ic_cancel" tools:ignore="DuplicateDefinition">@drawable/ic_cancel_white_32dp</item>
+        <item type="attr" name="ic_delete" tools:ignore="DuplicateDefinition">@drawable/ic_delete_white_32dp</item>
+        <item type="attr" name="ic_fast_forward" tools:ignore="DuplicateDefinition">@drawable/ic_fast_forward_white_32dp</item>
+        <item type="attr" name="ic_fast_rewind" tools:ignore="DuplicateDefinition">@drawable/ic_fast_rewind_white_32dp</item>
+        <item type="attr" name="ic_file_download" tools:ignore="DuplicateDefinition">@drawable/ic_file_download_white_32dp</item>
+        <item type="attr" name="ic_pause" tools:ignore="DuplicateDefinition">@drawable/ic_pause_white_32dp</item>
+        <item type="attr" name="ic_play" tools:ignore="DuplicateDefinition">@drawable/ic_play_arrow_white_32dp</item>
+        <item type="attr" name="ic_stop" tools:ignore="DuplicateDefinition">@drawable/ic_stop_white_32dp</item>
+
+
+        <item type="attr" name="ic_poddy" tools:ignore="DuplicateDefinition">@drawable/ic_poddy</item>
+    </style>
 
 </resources>

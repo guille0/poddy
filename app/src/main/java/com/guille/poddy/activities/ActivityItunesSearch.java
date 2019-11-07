@@ -10,13 +10,17 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.widget.Toast;
 import com.guille.poddy.*;
 import com.guille.poddy.database.*;
+import com.guille.poddy.services.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.json.*;
+import com.guille.poddy.eventbus.*;
+import org.greenrobot.eventbus.*;
 
 public class ActivityItunesSearch extends ActivityAbstract implements RecyclerViewItunesSearch.ItemClickListener {
     private ProgressDialog pd;
@@ -26,7 +30,7 @@ public class ActivityItunesSearch extends ActivityAbstract implements RecyclerVi
     private List<Podcast> podcasts;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_itunes_search);
 
@@ -70,12 +74,6 @@ public class ActivityItunesSearch extends ActivityAbstract implements RecyclerVi
         recyclerView = findViewById(R.id.podcastList);
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-
-//        final String itunesSearch = "https://itunes.apple.com/search?media=podcast&country=%s&term=%s%s";
-//        // Country, seach term, extra params
-//        final String url = String.format(itunesSearch, "US", "doughboys", "");
-//
-//        search(url);
     }
 
     private void search(String url) {
@@ -140,6 +138,9 @@ public class ActivityItunesSearch extends ActivityAbstract implements RecyclerVi
     @Override
     public void onItemClick(View view, int position) {
         // Add the podcast
-        FeedUpdaterBridge.updateFeed(getApplicationContext(), podcasts.get(position).url);
+        Toast.makeText(this,
+                "Adding " + podcasts.get(position).title,
+                Toast.LENGTH_SHORT).show();
+        FeedUpdaterService.updateFeeds(getApplicationContext(), new String[] {podcasts.get(position).url});
     }
 }

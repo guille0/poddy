@@ -11,55 +11,27 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.guille.poddy.Broadcast;
 import com.guille.poddy.R;
 import com.guille.poddy.database.DatabaseHelper;
 import com.guille.poddy.database.Podcast;
-import com.guille.poddy.services.FeedUpdaterBridge;
+import com.guille.poddy.services.*;
+import com.guille.poddy.eventbus.*;
+import org.greenrobot.eventbus.*;
+import android.util.*;
+import android.os.Bundle;
 
 import java.util.List;
 
-public abstract class ActivityAbstract extends AppCompatActivity{
-    // Toast that gets displayed no matter what activity we're on
-    private final BroadcastReceiver sendToast = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            try {
-                String text = intent.getExtras().getString("text");
-                Toast.makeText(ActivityAbstract.this, text, Toast.LENGTH_SHORT).show();
-            } catch (NullPointerException e) {
-                e.printStackTrace();
-            }
-        }
-    };
-
-    @Override
-    public void onStart() {
-        super.onStart();
-        // set broadcast receivers
-        final LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getApplicationContext());
-        bm.registerReceiver(sendToast, new IntentFilter(Broadcast.SEND_TOAST));
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-        // remove broadcast receivers
-        final LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getApplicationContext());
-        bm.unregisterReceiver(sendToast);
-    }
-
+public abstract class ActivityAbstract extends AppCompatActivity {
     // Global toolbar buttons (override them in specific activities if needed)
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
+        return super.onCreateOptionsMenu(menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle item selection
         switch (item.getItemId()) {
             case R.id.update:
                 // Update all podcasts
@@ -71,13 +43,21 @@ public abstract class ActivityAbstract extends AppCompatActivity{
                 for (int i=0; i<podcasts.size(); i++) {
                     feedUrls[i] = podcasts.get(i).url;
                 }
+                Toast.makeText(this,
+                        "Updating all podcasts",
+                        Toast.LENGTH_SHORT).show();
 
-                FeedUpdaterBridge.updateFeeds(getApplicationContext(), feedUrls);
+                FeedUpdaterService.updateFeeds(getApplicationContext(), feedUrls);
                 return true;
 
             case R.id.newPodcast:
                 Intent intent = new Intent(ActivityAbstract.this, ActivityNewPodcast.class);
                 startActivity(intent);
+                return true;
+
+            case R.id.preferences:
+                Intent intenty = new Intent(this, ActivityPreferences.class);
+                startActivity(intenty);
                 return true;
 
             default:

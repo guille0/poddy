@@ -7,24 +7,13 @@
     android:layout_height="match_parent"
     tools:context=".activities.ActivityPodcastEpisodes">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/layoutAppBar"
-        android:layout_width="0dp"
+    <include
+        layout="@layout/include_appbarlayout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:theme="@style/AppTheme.AppBarOverlay"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="?attr/colorPrimary"
-            android:minHeight="?attr/actionBarSize"
-            app:titleTextColor="@android:color/white"/>
-
-    </com.google.android.material.appbar.AppBarLayout>
+        app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -36,6 +25,7 @@
             android:id="@+id/textPodcastTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:gravity="center"
             android:textSize="26sp"
             app:layout_constraintBottom_toTopOf="@+id/imagePodcast"
             app:layout_constraintEnd_toEndOf="parent"
@@ -63,21 +53,18 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:srcCompat="@tools:sample/avatars"
-            android:contentDescription="TODO" />
+            android:contentDescription="@string/podcast_image" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/layoutContent"
-        android:layout_width="409dp"
+        android:layout_width="match_parent"
         android:layout_height="150dp"
         android:background="#83879E"
         android:orientation="horizontal"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/layoutAppBar"
-        app:layout_constraintVertical_bias="1.0">
+        app:layout_constraintStart_toStartOf="parent">
 
         <TextView
             android:id="@+id/textCurrentPosition"
@@ -100,35 +87,49 @@
             app:layout_constraintVertical_bias="0.88" />
 
         <ImageButton
-            android:id="@+id/imageFastForwardButton"
+            android:id="@+id/buttonFastForward"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/imagePlayButton"
+            android:contentDescription="@string/control_fast_forward"
+            app:layout_constraintBottom_toTopOf="@+id/textDuration"
+            app:layout_constraintStart_toEndOf="@id/layoutButton"
             app:layout_constraintTop_toBottomOf="@+id/seekBar"
-            app:srcCompat="@drawable/ic_fast_forward_black_24dp"
-            android:contentDescription="TODO" />
+            app:srcCompat="?attr/ic_fast_forward" />
 
         <ImageButton
-            android:id="@+id/imageRewindButton"
+            android:id="@+id/buttonRewind"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/imagePlayButton"
+            android:contentDescription="@string/control_rewind"
+            app:layout_constraintBottom_toTopOf="@+id/textDuration"
+            app:layout_constraintEnd_toStartOf="@id/layoutButton"
             app:layout_constraintTop_toBottomOf="@+id/seekBar"
-            app:srcCompat="@drawable/ic_fast_rewind_black_24dp"
-            android:contentDescription="TODO" />
+            app:srcCompat="?attr/ic_fast_rewind" />
 
-        <ImageButton
-            android:id="@+id/imagePlayButton"
+        <FrameLayout
+            android:id="@+id/layoutButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/textDuration"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/seekBar"
-            app:srcCompat="@drawable/ic_play_arrow_black_24dp"
-            android:contentDescription="TODO" />
+            app:layout_constraintTop_toBottomOf="@+id/seekBar">
+
+            <ImageButton
+                android:id="@+id/buttonResume"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:contentDescription="@string/control_play"
+                app:srcCompat="?attr/ic_play" />
+
+            <ImageButton
+                android:id="@+id/buttonPause"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:contentDescription="@string/control_pause"
+                android:visibility="gone"
+                app:srcCompat="?attr/ic_pause" />
+        </FrameLayout>
 
         <SeekBar
             android:id="@+id/seekBar"
@@ -136,10 +137,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="24dp"
-            android:layout_marginEnd="24dp"
             android:layout_marginTop="12dp"
-            app:layout_constraintStart_toStartOf="parent"
+            android:layout_marginEnd="24dp"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

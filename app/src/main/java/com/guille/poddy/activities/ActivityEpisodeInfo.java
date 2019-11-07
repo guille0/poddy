@@ -1,94 +1,117 @@
 package com.guille.poddy.activities;
 
-import com.guille.poddy.database.*;
-import com.guille.poddy.services.*;
-import com.guille.poddy.*;
-
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.os.Build;
+import com.squareup.picasso.Callback;
+import com.squareup.picasso.Picasso;
+import android.os.Bundle;
 import android.text.Html;
-
-import android.widget.*;
+import android.text.method.LinkMovementMethod;
+import android.text.method.ScrollingMovementMethod;
+import android.text.util.Linkify;
+import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.appcompat.widget.Toolbar;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-import android.text.method.ScrollingMovementMethod;
 
-import android.content.*;
-import android.text.util.Linkify;
-import java.io.File;
-
-import android.os.Bundle;
-import android.os.Build;
-import android.view.View;
-
-import java.util.*;
-
-import com.tonyodev.fetch2.*;
-
-import android.graphics.*;
-
+import com.guille.poddy.Helpers;
 import com.guille.poddy.R;
+import com.guille.poddy.database.DatabaseHelper;
+import com.guille.poddy.database.Episode;
+import com.guille.poddy.database.Podcast;
+import com.guille.poddy.services.*;
+import com.guille.poddy.*;
+import com.tonyodev.fetch2.Download;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import com.guille.poddy.eventbus.*;
+import org.greenrobot.eventbus.*;
 
 public class ActivityEpisodeInfo extends ActivityAbstract {
     private Episode episode;
     private Podcast podcast;
     private ImageView imagePodcast;
     private TextView textEpisodeTitle, textPodcastTitle, textDescription, textDuration, textDate;
-    private Button buttonDelete, buttonPlay;
+    private Button buttonResume, buttonStartPlay, buttonPause, buttonDownload, buttonCancel;
+    private Button buttonDelete;
     private ProgressBar progressBar;
 
-    private List<Download> downloading = new ArrayList<>();
+    private boolean listeningToThis;
+    private int listeningStatus;
 
-    // Broadcast listener for getting updates on downloads
-    private final BroadcastReceiver downloadUpdateReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            try {
-                List<Download> total = new ArrayList<>(downloading);
-                downloading = (List<Download>) intent.getSerializableExtra("downloading");
-                total.addAll(downloading);
+    private List<Download> downloads = new ArrayList<>();
 
-                final Download download = Helpers.isBeingDownloaded(total, episode.id);
-                if (download != null) {
-                    if (Helpers.isBeingDownloaded(downloading, episode.id) == null) {
-                        refreshEpisode(true);
-                    } else {
-                        refreshEpisode(false);
-                    }
-                }
-            } catch (NullPointerException e) {
-                e.printStackTrace();
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onReceiveRefreshEpisode(MessageEvent.RefreshEpisode event) {
+        if (episode.id == event.episodeId)
+            refreshEpisode(true);
+    }
+
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    public void onReceiveAudioBeingPlayedStatus(MessageEvent.AudioBeingPlayedStatus event) {
+        if (event.episodeId == episode.id) {
+            listeningToThis = true;
+            listeningStatus = event.status;
+        } else {
+            listeningToThis = false;
+        }
+        refreshEpisode(false);
+    }
+
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    public void onReceiveEpisodesBeingDownloaded(MessageEvent.EpisodesBeingDownloaded event) {
+        List<Download> total = new ArrayList<>(downloads);
+        downloads = event.downloads;
+        total.addAll(downloads);
+
+        final Download download = Helpers.isBeingDownloaded(total, episode.id);
+        if (download != null) {
+            if (Helpers.isBeingDownloaded(downloads, episode.id) == null) {
+                refreshEpisode(true);
+            } else {
+                refreshEpisode(false);
             }
         }
-    };
+    }
 
     @Override
     public void onStart() {
         super.onStart();
-        final LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getApplicationContext());
-        bm.registerReceiver(downloadUpdateReceiver, new IntentFilter(Broadcast.REFRESH_EPISODES));
-        requestRefreshEpisode();
+        if (!EventBus.getDefault().isRegistered(this)) {
+            EventBus.getDefault().register(this);
+        } else {
+            EventBus.getDefault().unregister(this);
+            EventBus.getDefault().register(this);
+        }
     }
 
     @Override
-    public void onStop() {
-        super.onStop();
-        final LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getApplicationContext());
-        bm.unregisterReceiver(downloadUpdateReceiver);
+    public void onDestroy() {
+        super.onDestroy();
+        EventBus.getDefault().unregister(this);
     }
 
-
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_episode_info);
-
-        // Set up toolbar
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
         // The podcast that was passed in
         episode = getIntent().getExtras().getParcelable("episode");
         podcast = getIntent().getExtras().getParcelable("podcast");
+
+        // Set up toolbar
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        getSupportActionBar().setTitle(episode.title);
 
         imagePodcast = findViewById(R.id.imagePodcast);
 
@@ -100,77 +123,74 @@ public class ActivityEpisodeInfo extends ActivityAbstract {
 
         progressBar = findViewById(R.id.progressBar);
 
-        buttonPlay = findViewById(R.id.buttonPlay);
         buttonDelete = findViewById(R.id.buttonDelete);
+
+        // All variants of the same button
+        buttonResume = findViewById(R.id.buttonResume);
+        buttonStartPlay = findViewById(R.id.buttonStartPlay);
+        buttonPause = findViewById(R.id.buttonPause);
+        buttonDownload = findViewById(R.id.buttonDownload);
+        buttonCancel = findViewById(R.id.buttonCancel);
         setUpButtons();
 
-
         textEpisodeTitle.setText(episode.title);
-        textPodcastTitle.setText(podcast.title);
+        textPodcastTitle.setText(episode.podcastTitle);
         textDate.setText(Helpers.dateToReadable(episode.date));
-        setImage();
 
-        if (!episode.duration.equals("")) {
-            try {
-                textDuration.setText(Helpers.milisecondsToString(Integer.parseInt(episode.duration)));
-            } catch (Exception e){
-                e.printStackTrace();
-            }
-        }
+        Helpers.setEpisodeImage(imagePodcast, episode);
+
+        textDuration.setText(Helpers.milisecondsToString(episode.duration));
         // Description
+        textDescription.setMovementMethod(LinkMovementMethod.getInstance());
+        textDescription.setAutoLinkMask(Linkify.WEB_URLS);
         textDescription.setMovementMethod(new ScrollingMovementMethod());
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            textDescription.setText(Html.fromHtml(episode.description, Html.FROM_HTML_MODE_COMPACT));
+            textDescription.setText(Html.fromHtml(episode.description, 0));
         } else {
             textDescription.setText(Html.fromHtml(episode.description));
         }
-        Linkify.addLinks(textDescription, Linkify.WEB_URLS);
-        // TODO change linkify, its annoying
-    }
-
-    private void setImage() {
-        Bitmap bitmap = Helpers.getPodcastImage(this, episode, podcast);
-        if (bitmap != null)
-            imagePodcast.setImageBitmap(bitmap);
-        else
-            imagePodcast.setImageResource(R.drawable.ic_add_black_24dp);
-    }
-
-    private void requestRefreshEpisode() {
-        Intent intent = new Intent(Broadcast.REQUEST_REFRESH_EPISODE);
-        final LocalBroadcastManager bm = LocalBroadcastManager.getInstance(this);
-        bm.sendBroadcast(intent);
     }
 
     private void setUpButtons() {
         refreshEpisode(false);
-        buttonPlay.setOnClickListener(v -> {
-            final DatabaseHelper dbh = DatabaseHelper.getInstance(getApplicationContext());
-            episode = dbh.getEpisodeFromId(episode.id);
-            Podcast pod = dbh.getPodcastFromEpisode(episode.id);
 
+        buttonPause.setOnClickListener(v ->
+                EventBus.getDefault().post(new MessageEvent.PauseOrResume()));
+
+        buttonResume.setOnClickListener(v ->
+                EventBus.getDefault().post(new MessageEvent.PauseOrResume()));
+
+        buttonStartPlay.setOnClickListener(v -> {
             if (episode.downloaded) {
                 if (new File(episode.file).exists()) {
-                    MediaPlayerBridge.playAudio(getApplicationContext(), episode, pod);
+                    MediaPlayerService.coldPlayAudio(this, episode.id);
                 } else {
                     // File doesn't exist, so set DOWNLOADED as false and refresh that episode
+                    final DatabaseHelper dbh = DatabaseHelper.getInstance(getApplicationContext());
                     if (dbh.updateEpisodeDownloadedStatus(episode.id, false, "")) {
                         refreshEpisode(true);
                     }
                 }
-            } else {
-                final Download download = Helpers.isBeingDownloaded(downloading, episode.id);
-                if (download == null) {
-                    DownloaderBridge.downloadEpisode(getApplicationContext(), episode, pod);
-                } else {
-                    DownloaderBridge.cancelDownload(getApplicationContext(), download);
-                }
+            }
+        });
+
+        buttonDownload.setOnClickListener(v -> {
+            final Download download = Helpers.isBeingDownloaded(downloads, episode.id);
+            if (download == null) {
+                DownloaderService.download(getApplicationContext(), episode, podcast);
+            }
+        });
+
+        buttonCancel.setOnClickListener(v -> {
+            final Download download = Helpers.isBeingDownloaded(downloads, episode.id);
+            if (download != null) {
+                EventBus.getDefault().post(new MessageEvent.CancelDownload(download));
             }
         });
 
         buttonDelete.setOnClickListener(v -> {
             final DatabaseHelper dbh = DatabaseHelper.getInstance(getApplicationContext());
-            episode = dbh.getEpisodeFromId(episode.id);
+//            episode = dbh.getEpisodeFromId(episode.id);
             if (episode.downloaded) {
                 File checkFile = new File(episode.file);
                 if(checkFile.exists()) {
@@ -178,6 +198,7 @@ public class ActivityEpisodeInfo extends ActivityAbstract {
                 }
                 if (dbh.updateEpisodeDownloadedStatus(episode.id, false, "")) {
                     refreshEpisode(true);
+                    EventBus.getDefault().post(new MessageEvent.RefreshPodcast(""));
                 }
             }
         });
@@ -187,24 +208,79 @@ public class ActivityEpisodeInfo extends ActivityAbstract {
         if (reloadDatabase) {
             final DatabaseHelper dbh = DatabaseHelper.getInstance(getApplicationContext());
             episode = dbh.getEpisodeFromId(episode.id);
-            setImage();
+            Helpers.setEpisodeImage(imagePodcast, episode);
+            textDuration.setText(Helpers.milisecondsToString(episode.duration));
         }
+
+        final int STARTPLAY = 1;
+        final int RESUME = 2;
+        final int PAUSE = 3;
+        final int DOWNLOAD = 4;
+        final int CANCEL = 5;
+        int activeButton;
+
         if (episode.downloaded) {
-            buttonPlay.setText("Play");
-            buttonPlay.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_play_arrow_black_24dp, 0);
+            if (listeningToThis && listeningStatus != MediaPlayerService.STOPPED) {
+                if (listeningStatus == MediaPlayerService.PAUSED)
+                    activeButton = RESUME;
+                else
+                    activeButton = PAUSE;
+            } else
+                activeButton = STARTPLAY;
             progressBar.setVisibility(View.GONE);
         } else {
-            final Download download = Helpers.isBeingDownloaded(this.downloading, episode.id);
+            final Download download = Helpers.isBeingDownloaded(this.downloads, episode.id);
             if (download != null) {
-                buttonPlay.setText("Cancel");
-                buttonPlay.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_cancel_black_24dp, 0);
+                activeButton = CANCEL;
                 progressBar.setVisibility(View.VISIBLE);
                 progressBar.setProgress(download.getProgress());
             } else {
-                buttonPlay.setText("Download");
-                buttonPlay.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_file_download_black_24dp, 0);
+                activeButton = DOWNLOAD;
                 progressBar.setVisibility(View.GONE);
             }
+        }
+
+        switch (activeButton) {
+            case STARTPLAY:
+                buttonResume.setVisibility(View.GONE);
+                buttonPause.setVisibility(View.GONE);
+                buttonDownload.setVisibility(View.GONE);
+                buttonCancel.setVisibility(View.GONE);
+                buttonStartPlay.setVisibility(View.VISIBLE);
+                buttonDelete.setVisibility(View.VISIBLE);
+                break;
+            case RESUME:
+                buttonStartPlay.setVisibility(View.GONE);
+                buttonPause.setVisibility(View.GONE);
+                buttonDownload.setVisibility(View.GONE);
+                buttonCancel.setVisibility(View.GONE);
+                buttonResume.setVisibility(View.VISIBLE);
+                buttonDelete.setVisibility(View.VISIBLE);
+                break;
+            case PAUSE:
+                buttonStartPlay.setVisibility(View.GONE);
+                buttonDownload.setVisibility(View.GONE);
+                buttonCancel.setVisibility(View.GONE);
+                buttonResume.setVisibility(View.GONE);
+                buttonPause.setVisibility(View.VISIBLE);
+                buttonDelete.setVisibility(View.VISIBLE);
+                break;
+            case DOWNLOAD:
+                buttonStartPlay.setVisibility(View.GONE);
+                buttonCancel.setVisibility(View.GONE);
+                buttonResume.setVisibility(View.GONE);
+                buttonPause.setVisibility(View.GONE);
+                buttonDelete.setVisibility(View.GONE);
+                buttonDownload.setVisibility(View.VISIBLE);
+                break;
+            case CANCEL:
+                buttonStartPlay.setVisibility(View.GONE);
+                buttonResume.setVisibility(View.GONE);
+                buttonPause.setVisibility(View.GONE);
+                buttonDownload.setVisibility(View.GONE);
+                buttonDelete.setVisibility(View.GONE);
+                buttonCancel.setVisibility(View.VISIBLE);
+                break;
         }
     }
 }

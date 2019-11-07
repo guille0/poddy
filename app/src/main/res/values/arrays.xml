@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="podcast_order">
+        <item>Order by title</item>
+        <item>Order by most recent episode</item>
+    </string-array>
+    <string-array name="podcast_order_values">
+        <item>0</item>
+        <item>1</item>
+    </string-array>
+
+    <string-array name="download_data">
+        <item>Only wifi</item>
+        <item>Data and wifi</item>
+    </string-array>
+    <string-array name="download_data_values">
+        <item>0</item>
+        <item>1</item>
+    </string-array>
+</resources>

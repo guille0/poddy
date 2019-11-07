@@ -50,7 +50,7 @@ public class DatabaseHelper extends SQLiteOpenHelper{
                 "url TEXT NOT NULL UNIQUE," +
 
                 "directory TEXT," +
-                "imageFile TEXT" +
+                "imageUrl TEXT" +
                 ")";
 
         String CREATE_EPISODES_TABLE = "" +
@@ -58,27 +58,29 @@ public class DatabaseHelper extends SQLiteOpenHelper{
                 "id INTEGER PRIMARY KEY," +
                 "podcastId INTEGER REFERENCES podcasts ON DELETE CASCADE," +
                 "title TEXT," +
+                "description TEXT," +
                 "downloaded BOOLEAN," +
 
-                "description TEXT," +
-                "date TEXT," +
                 "file TEXT," +
+                "imageUrl TEXT," +
+                "episode INTEGER," +
+                "date TEXT," +
+
+                "guid TEXT," +
+                "author TEXT," +
 
                 "enclosureUrl TEXT UNIQUE," +
                 "enclosureType TEXT," +
                 "enclosureLength INTEGER," +
 
                 "position INTEGER DEFAULT 0," +
-                "duration TEXT" +
+                "duration INTEGER DEFAULT 0" +
                 ")";
 
         db.execSQL(CREATE_PODCASTS_TABLE);
         db.execSQL(CREATE_EPISODES_TABLE);
     }
 
-    // Called when the database needs to be upgraded.
-    // This method will only be called if a database already exists on disk with the same DATABASE_NAME,
-    // but the DATABASE_VERSION is different than the version of the database that exists on disk.
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         if (oldVersion != newVersion) {
@@ -88,7 +90,6 @@ public class DatabaseHelper extends SQLiteOpenHelper{
             onCreate(db);
         }
     }
-
 
     // ADD
 
@@ -104,10 +105,10 @@ public class DatabaseHelper extends SQLiteOpenHelper{
             values.put("title", podcast.title);
             values.put("description", podcast.description);
             values.put("url", podcast.url);
-            values.put("imageFile", podcast.imageFile);
             values.put("directory", podcast.directory);
+            values.put("imageUrl", podcast.imageUrl);
 
-            podcastId = db.insertOrThrow("podcasts", null, values);
+            podcastId = db.insertWithOnConflict("podcasts", null, values, SQLiteDatabase.CONFLICT_IGNORE);
             db.setTransactionSuccessful();
         } catch (Exception e) {
             Log.d("db", "Error while trying to add post to database." +
@@ -118,7 +119,6 @@ public class DatabaseHelper extends SQLiteOpenHelper{
         return podcastId;
     }
 
-
     public void addEpisodes(List<Episode> eps, long podcastId) {
         SQLiteDatabase db = getWritableDatabase();
         ContentValues values;
@@ -127,40 +127,44 @@ public class DatabaseHelper extends SQLiteOpenHelper{
         try {
             for (Episode ep: eps) {
                 values = new ContentValues();
-                values.put("title", ep.title);
                 values.put("podcastId", podcastId);
+                values.put("title", ep.title);
+                values.put("description", ep.description);
                 values.put("downloaded", ep.downloaded);
 
                 values.put("file", ep.file);
-                values.put("description", ep.description);
+                values.put("imageUrl", ep.imageUrl);
+                values.put("episode", ep.episode);
                 values.put("date", ep.date);
+
+                values.put("guid", ep.guid);
+                values.put("author", ep.author);
 
                 values.put("enclosureUrl", ep.enclosureUrl);
                 values.put("enclosureType", ep.enclosureType);
                 values.put("enclosureLength", ep.enclosureLength);
 
                 values.put("duration", ep.duration);
+                values.put("position", ep.position);
 
-                db.insertOrThrow("episodes", null, values);
+                db.insertWithOnConflict("episodes", null, values, SQLiteDatabase.CONFLICT_IGNORE);
             }
             db.setTransactionSuccessful();
         } catch (Exception e) {
-            Log.e("db", "Error while trying to add episode to database.");
+            Log.d("db", "Error while trying to add episode to database.");
         } finally {
             db.endTransaction();
         }
     }
-
 
     private void updatePodcast(Podcast podcast, long podcastId) {
         SQLiteDatabase db = getWritableDatabase();
         db.beginTransaction();
         try {
             ContentValues values = new ContentValues();
-            values.put("title", podcast.title);
             values.put("url", podcast.url);
             values.put("description", podcast.description);
-            values.put("imageFile", podcast.imageFile);
+            values.put("imageUrl", podcast.imageUrl);
 
             db.update("podcasts", values, "id=?", new String[] {Long.toString(podcastId)});
             db.setTransactionSuccessful();
@@ -170,7 +174,6 @@ public class DatabaseHelper extends SQLiteOpenHelper{
             db.endTransaction();
         }
     }
-
 
     public Boolean updateEpisodeDownloadedStatus(long episodeId, Boolean downloaded, String file) {
         boolean success = true;
@@ -193,8 +196,7 @@ public class DatabaseHelper extends SQLiteOpenHelper{
         return success;
     }
 
-
-    public void updateEpisodePosition(long episodeId, int position) {
+    public void updateEpisodePosition(long episodeId, long position) {
         SQLiteDatabase db = getWritableDatabase();
         db.beginTransaction();
         try {
@@ -211,8 +213,7 @@ public class DatabaseHelper extends SQLiteOpenHelper{
         }
     }
 
-
-    public void updateEpisodeDuration(long episodeId, String duration) {
+    public void updateEpisodeDuration(long episodeId, long duration) {
         SQLiteDatabase db = getWritableDatabase();
         db.beginTransaction();
         try {
@@ -237,11 +238,6 @@ public class DatabaseHelper extends SQLiteOpenHelper{
         try {
             String query = "id=?";
             db.delete("podcasts", query, new String[] {Long.toString(podcastId)});
-
-//            query = "podcastId=?";
-//            db.delete("episodes", query, new String[] {Long.toString(podcastId)});
-//            Log.i("dbh", "episodes deleted");
-
             db.setTransactionSuccessful();
         } catch (Exception e) {
             Log.d("db", "Error while trying to delete podcast.");
@@ -284,12 +280,34 @@ public class DatabaseHelper extends SQLiteOpenHelper{
     }
 
     public List<Podcast> getAllPodcasts() {
-        String query = "SELECT * FROM podcasts";
+        String query = "SELECT * FROM podcasts ORDER BY title ASC";
 
         SQLiteDatabase db = getReadableDatabase();
         Cursor cursor = db.rawQuery(query, null);
 
         return getPodcastsFromCursor(cursor);
+    }
+
+     public List<Podcast> getAllPodcastsOrderByDate() {
+        String query = "SELECT p.*, MAX(e.date) FROM podcasts p " +
+                 "INNER JOIN episodes e ON e.podcastId = p.id " +
+                 "GROUP BY p.id " +
+                 "ORDER BY DATE(e.date) DESC ";
+
+         SQLiteDatabase db = getReadableDatabase();
+         Cursor cursor = db.rawQuery(query, null);
+
+         return getPodcastsFromCursor(cursor);
+     }
+
+    public Podcast getPodcastFromId(long id) {
+        String query = "SELECT * FROM podcasts " +
+                "WHERE id = ?";
+
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = db.rawQuery(query, new String[] {Long.toString(id)});
+
+        return getPodcastsFromCursor(cursor).get(0);
     }
 
     public Podcast getPodcastFromEpisode(long episodeId) {
@@ -314,11 +332,10 @@ public class DatabaseHelper extends SQLiteOpenHelper{
                     pcast.title = cursor.getString(cursor.getColumnIndex("title"));
                     pcast.description = cursor.getString(cursor.getColumnIndex("description"));
                     pcast.url = cursor.getString(cursor.getColumnIndex("url"));
-                    pcast.imageFile = cursor.getString(cursor.getColumnIndex("imageFile"));
                     pcast.directory = cursor.getString(cursor.getColumnIndex("directory"));
+                    pcast.imageUrl = cursor.getString(cursor.getColumnIndex("imageUrl"));
 
                     podcasts.add(pcast);
-
                 } while(cursor.moveToNext());
             }
         } catch (Exception e) {
@@ -334,7 +351,10 @@ public class DatabaseHelper extends SQLiteOpenHelper{
     // GET EPISODES
 
     public Episode getEpisodeFromId(long episodeId) {
-        String query = "SELECT * FROM episodes WHERE id =?";
+//        String query = "SELECT * FROM episodes WHERE id =?";
+        String query = "SELECT e.*, p.title as podcastTitle, p.imageUrl as podcastImageUrl FROM episodes e " +
+                "INNER JOIN podcasts p ON e.podcastId= p.id "  +
+                "WHERE e.id=? ";
 
         SQLiteDatabase db = getReadableDatabase();
         Cursor cursor = db.rawQuery(query, new String[] {Long.toString(episodeId)});
@@ -344,7 +364,10 @@ public class DatabaseHelper extends SQLiteOpenHelper{
 
 
     public List<Episode> getAllEpisodes() {
-        String query = "SELECT * FROM episodes ORDER BY DATE(date) DESC";
+//        String query = "SELECT * FROM episodes ORDER BY DATE(date) DESC";
+        String query = "SELECT e.*, p.title as podcastTitle, p.imageUrl as podcastImageUrl FROM episodes e " +
+                "INNER JOIN podcasts p ON e.podcastId= p.id "  +
+                "ORDER BY DATE(e.date) DESC ";
 
         SQLiteDatabase db = getReadableDatabase();
         Cursor cursor = db.rawQuery(query, null);
@@ -354,7 +377,11 @@ public class DatabaseHelper extends SQLiteOpenHelper{
 
 
     public List<Episode> getEpisodesFromPodcast(long podcastId) {
-        String query = "SELECT * FROM episodes WHERE podcastId=? ORDER BY DATE(date) DESC";
+//        String query = "SELECT * FROM episodes WHERE podcastId=? ORDER BY DATE(date) DESC";
+        String query = "SELECT e.*, p.title as podcastTitle, p.imageUrl as podcastImageUrl FROM episodes e " +
+                "INNER JOIN podcasts p ON e.podcastId= p.id " +
+                "WHERE p.id = ? "  +
+                "ORDER BY DATE(e.date) DESC ";
 
         SQLiteDatabase db = getReadableDatabase();
         Cursor cursor = db.rawQuery(query, new String[] {Long.toString(podcastId)});
@@ -364,9 +391,13 @@ public class DatabaseHelper extends SQLiteOpenHelper{
 
 
     public List<Episode> getDownloadedEpisodes() {
-        String query = "SELECT * FROM episodes " +
-                "WHERE downloaded = 1 " +
-                "ORDER BY DATE(date) DESC";
+//        String query = "SELECT * FROM episodes " +
+//                "WHERE downloaded = 1 " +
+//                "ORDER BY DATE(date) DESC";
+        String query = "SELECT e.*, p.title as podcastTitle, p.imageUrl as podcastImageUrl FROM episodes e " +
+                "INNER JOIN podcasts p ON e.podcastId= p.id " +
+                "WHERE e.downloaded = 1 "  +
+                "ORDER BY DATE(e.date) DESC ";
 
         SQLiteDatabase db = getReadableDatabase();
         Cursor cursor = db.rawQuery(query, null);
@@ -376,9 +407,13 @@ public class DatabaseHelper extends SQLiteOpenHelper{
 
 
     public List<Episode> getEpisodesFromThisWeek() {
-        String query = "SELECT * FROM episodes " +
-                "WHERE DATE(date) >= DATE('now', 'weekday 0', '-7 days')" +
-                "ORDER BY date(date) DESC";
+//        String query = "SELECT * FROM episodes " +
+//                "WHERE DATE(date) >= DATE('now', 'weekday 0', '-7 days')" +
+//                "ORDER BY date(date) DESC";
+        String query = "SELECT e.*, p.title as podcastTitle, p.imageUrl as podcastImageUrl FROM episodes e " +
+                "INNER JOIN podcasts p ON e.podcastId= p.id " +
+                "WHERE DATE(e.date) >= DATE('now', 'weekday 0', '-7 days') "  +
+                "ORDER BY DATE(e.date) DESC ";
 
         SQLiteDatabase db = getReadableDatabase();
         Cursor cursor = db.rawQuery(query, null);
@@ -398,18 +433,25 @@ public class DatabaseHelper extends SQLiteOpenHelper{
                     ep.title = cursor.getString(cursor.getColumnIndex("title"));
                     ep.downloaded = cursor.getInt(cursor.getColumnIndex("downloaded")) > 0;
                     ep.podcastId = cursor.getInt(cursor.getColumnIndex("podcastId"));
+                    ep.description = cursor.getString(cursor.getColumnIndex("description"));
 
                     ep.file = cursor.getString(cursor.getColumnIndex("file"));
-                    ep.description = cursor.getString(cursor.getColumnIndex("description"));
                     ep.date = cursor.getString(cursor.getColumnIndex("date"));
+                    ep.imageUrl = cursor.getString(cursor.getColumnIndex("imageUrl"));
+                    ep.episode = cursor.getInt(cursor.getColumnIndex("episode"));
+
+                    ep.guid = cursor.getString(cursor.getColumnIndex("guid"));
+                    ep.author = cursor.getString(cursor.getColumnIndex("author"));
 
                     ep.enclosureUrl = cursor.getString(cursor.getColumnIndex("enclosureUrl"));
                     ep.enclosureType = cursor.getString(cursor.getColumnIndex("enclosureType"));
                     ep.enclosureLength = cursor.getInt(cursor.getColumnIndex("enclosureLength"));
 
-                    ep.duration = cursor.getString(cursor.getColumnIndex("duration"));
-
+                    ep.duration = cursor.getInt(cursor.getColumnIndex("duration"));
                     ep.position = cursor.getInt(cursor.getColumnIndex("position"));
+
+                    ep.podcastTitle = cursor.getString(cursor.getColumnIndex("podcastTitle"));
+                    ep.podcastImageUrl = cursor.getString(cursor.getColumnIndex("podcastImageUrl"));
 
                     episodes.add(ep);
 

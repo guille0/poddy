@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <PreferenceCategory
+        android:title="Interface">
+
+        <ListPreference
+            android:defaultValue="1"
+            android:key="podcast_order"
+            android:summary="Order in which podcasts are shown"
+            android:title="Podcast order"
+
+            android:dialogTitle="Podcast order"
+            android:entries="@array/podcast_order"
+            android:entryValues="@array/podcast_order_values" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="Network">
+
+        <EditTextPreference
+            android:defaultValue="3"
+            android:key="download_limit"
+            android:summary="Maximum concurrent downloads"
+            android:title="Download limit"
+            android:inputType="numberDecimal"
+            android:digits="0123456789"/>
+
+        <ListPreference
+            android:defaultValue="0"
+            android:key="data_usage"
+            android:summary="Data usage for podcast downloads"
+            android:title="Data usage"
+
+            android:dialogTitle="Podcast order"
+            android:entries="@array/download_data"
+            android:entryValues="@array/download_data_values" />
+
+    </PreferenceCategory>
+
+
+</PreferenceScreen>

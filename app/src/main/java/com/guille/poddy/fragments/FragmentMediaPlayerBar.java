@@ -1,105 +1,81 @@
 package com.guille.poddy.fragments;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
-import android.widget.TextView;
 import android.widget.ProgressBar;
-
-import android.content.*;
+import android.widget.TextView;
+import android.util.*;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 
 import com.guille.poddy.R;
-import com.guille.poddy.activities.*;
+import com.guille.poddy.activities.ActivityMediaPlayer;
+import com.guille.poddy.database.Episode;
+import com.guille.poddy.database.Podcast;
 import com.guille.poddy.services.*;
-import com.guille.poddy.database.*;
-import com.guille.poddy.Broadcast;
-
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import com.guille.poddy.eventbus.*;
+import org.greenrobot.eventbus.*;
 
 import org.jetbrains.annotations.NotNull;
 
 
-public class FragmentMediaPlayerBar extends Fragment {
-    private ImageButton imagePlayButton;
+public class FragmentMediaPlayerBar extends FragmentAbstract {
+    private ImageButton buttonPlay, buttonPause;
     private TextView textEpisodeTitle;
     private ProgressBar progressBar;
 
     private Episode ep;
     private Podcast pod;
-    private int status, currentPosition, duration;
 
-    private final BroadcastReceiver getMusicPlayerInfo = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            refreshBar(intent);
-        }
-    };
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    public void onReceiveAudioBeingPlayedEpisode(MessageEvent.AudioBeingPlayedEpisode event) {
+        ep = event.episode;
+        textEpisodeTitle.setText(ep.title);
+    }
 
-    private void refreshBar(Intent intent) {
-        try {
-            status = intent.getExtras().getInt("status");
-            currentPosition = intent.getExtras().getInt("currentPosition");
-            duration = intent.getExtras().getInt("duration");
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    public void onReceiveAudioBeingPlayedStatus(MessageEvent.AudioBeingPlayedStatus event) {
+        final int status = event.status;
 
-            ep = intent.getExtras().getParcelable("episode");
-            pod = intent.getExtras().getParcelable("podcast");
-
-            final int progress = Math.round(((float) currentPosition / (float) duration) * 100);
-
-//            if (textEpisodeTitle.getText().toString() != ep.title)
-            textEpisodeTitle.setText(ep.title);
-            progressBar.setProgress(progress);
-
+        if (status == MediaPlayerService.STOPPED) {
+            hide();
+        } else {
+            show();
             if (status == MediaPlayerService.PAUSED) {
-                imagePlayButton.setImageResource(R.drawable.ic_play_arrow_black_24dp);
+                buttonPlay.setVisibility(View.VISIBLE);
+                buttonPause.setVisibility(View.GONE);
             } else {
-                imagePlayButton.setImageResource(R.drawable.ic_pause_black_24dp);
+                buttonPlay.setVisibility(View.GONE);
+                buttonPause.setVisibility(View.VISIBLE);
             }
-
-        } catch (NullPointerException e) {
-            e.printStackTrace();
         }
     }
 
-    public FragmentMediaPlayerBar() {
-        Bundle bundle = new Bundle();
-        this.setArguments(bundle);
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    public void onReceiveAudioBeingPlayedPosition(MessageEvent.AudioBeingPlayedPosition event) {
+        final int progress = Math.round(((float) event.currentPosition / (float) event.duration) * 100);
+        progressBar.setProgress(progress);
     }
 
-    private void requestRefreshMediaPlayer() {
-        Intent intent = new Intent(Broadcast.REQUEST_REFRESH_MEDIAPLAYER);
-        final LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getActivity().getApplicationContext());
-        bm.sendBroadcast(intent);
+    private void hide() {
+        FragmentManager fm = getActivity().getSupportFragmentManager();
+        fm.beginTransaction()
+                .hide(FragmentMediaPlayerBar.this)
+                .commitAllowingStateLoss();
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        requestRefreshMediaPlayer();
-    }
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        // Set receiver for updating the bar
-        IntentFilter filter = new IntentFilter(Broadcast.REFRESH_MEDIAPLAYER);
-
-        final LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getActivity().getApplicationContext());
-        bm.registerReceiver(getMusicPlayerInfo, filter);
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-
-        final LocalBroadcastManager bm = LocalBroadcastManager.getInstance(getActivity().getApplicationContext());
-        bm.unregisterReceiver(getMusicPlayerInfo);
+    private void show() {
+        FragmentManager fm = getActivity().getSupportFragmentManager();
+        fm.beginTransaction()
+                .show(FragmentMediaPlayerBar.this)
+                .commitAllowingStateLoss();
     }
 
     @Override
@@ -110,7 +86,12 @@ public class FragmentMediaPlayerBar extends Fragment {
 
     @Override
     public void onViewCreated(@NotNull View view, @Nullable Bundle savedInstanceState) {
-        imagePlayButton = getView().findViewById(R.id.imagePlayButton);
+        if (!MediaPlayerService.isServiceRunning(getActivity().getApplicationContext())) {
+            hide();
+        }
+
+        buttonPlay = getView().findViewById(R.id.buttonResume);
+        buttonPause = getView().findViewById(R.id.buttonPause);
         textEpisodeTitle = getView().findViewById(R.id.textEpisodeTitle);
         progressBar = getView(). findViewById(R.id.progressBar);
 
@@ -119,9 +100,10 @@ public class FragmentMediaPlayerBar extends Fragment {
             startActivity(intent);
         });
 
-        imagePlayButton.setOnClickListener(v -> MediaPlayerBridge.pauseOrResumeAudio(FragmentMediaPlayerBar.this.getActivity().getApplication()));
+        buttonPlay.setOnClickListener(v ->
+                EventBus.getDefault().post(new MessageEvent.PauseOrResume()));
 
+        buttonPause.setOnClickListener(v ->
+                EventBus.getDefault().post(new MessageEvent.PauseOrResume()));
     }
-
-
 }
