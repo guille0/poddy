@@ -2,4 +2,4 @@
 
 Podcast app for android
 
-![gif](https://github.com/guille0/poddy/blob/master/screenshot.jpg)
+![pic](https://github.com/guille0/poddy/blob/master/screenshot.jpg)
